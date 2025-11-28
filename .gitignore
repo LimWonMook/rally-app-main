@@ -1,0 +1,86 @@
+# ==========================
+# 1. Target & 빌드 목록 (요청하신 부분)
+# ==========================
+targetdirectories.txt
+
+# ==========================
+# 2. CMake & Ninja (빌드 시스템 부산물)
+# ==========================
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+CTestTestfile.cmake
+*.cmake
+# (CMakeLists.txt는 살려둡니다)
+!CMakeLists.txt
+!cmake/
+
+# Ninja 로그
+.ninja_log
+.ninja_deps
+*.ninja
+
+# React Native Autolinking (C++ 연결)
+autolinking.cpp*
+autolinking.*
+
+# ==========================
+# 3. 설정 및 포맷터 파일 (요청하신 대로 모두 무시)
+# ==========================
+.babelrc
+.babelrc.js
+.clang-format
+.eslintrc
+.eslintrc.js
+.prettierrc
+.prettierrc.js
+tslint.json
+tsconfig.json
+*.local
+.env
+.env.*
+
+# ==========================
+# 4. Android & Native Build (가장 무거움)
+# ==========================
+# C++ 네이티브 빌드 캐시 (NDK)
+.cxx/
+/android/app/.cxx/
+android/.cxx/
+
+# 안드로이드 빌드 산출물
+build/
+android/build/
+android/app/build/
+android/app/build/generated/
+
+# Gradle 및 로컬 속성
+.gradle/
+android/.gradle/
+local.properties
+
+# ==========================
+# 5. Node.js & Logs
+# ==========================
+node_modules/
+npm-debug.log
+yarn-error.log
+yarn-debug.log
+*.log
+package-lock.json
+yarn.lock
+
+# ==========================
+# 6. IDE & OS Junk
+# ==========================
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+*.iml
+/.idea/
+/.idea/workspace.xml
+/android/app/.cxx/Debug/
+/android/app/.cxx/tools/
