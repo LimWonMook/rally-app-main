@@ -27,7 +27,7 @@ export default function ChatRoomScreen() {
 
   // 2. 모달 상태 관리 추가 (보임 여부, 선택된 유저 정보)
   const [isModalVisible, setModalVisible] = useState(false);
-  
+
   // (임시) 상대방 프로필 데이터 - 실제로는 API로 받아오거나 route params로 받아야 함
   const opponentProfile = {
     id: 'opponent_1',
@@ -71,13 +71,13 @@ export default function ChatRoomScreen() {
         {/* 상대방일 때만 프로필 이미지 표시 */}
         {!isMe && (
           <TouchableOpacity onPress={handleProfilePress}>
-            <Image 
+            <Image
               source={opponentProfile.avatar} // 아까 설정한 URL 이미지 사용
-              style={styles.avatarCircle} 
+              style={styles.avatarCircle}
             />
           </TouchableOpacity>
         )}
-        
+
         <View style={[styles.bubble, isMe ? styles.bubbleRight : styles.bubbleLeft]}>
           <Text style={[styles.msgText, isMe ? styles.msgTextRight : styles.msgTextLeft]}>
             {item.text}
@@ -127,7 +127,7 @@ export default function ChatRoomScreen() {
       </KeyboardAvoidingView>
 
       {/* 5. 모달 컴포넌트를 화면 최상위에 렌더링 */}
-      <OpponentProfileModal 
+      <OpponentProfileModal
         visible={isModalVisible}
         onClose={() => setModalVisible(false)}
         userProfile={opponentProfile}

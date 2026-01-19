@@ -1,14 +1,14 @@
 import React from 'react';
-import { 
-  View, 
-  Text, 
-  Image, 
-  Modal, 
-  StyleSheet, 
-  TouchableOpacity, 
-  TouchableWithoutFeedback, 
+import {
+  View,
+  Text,
+  Image,
+  Modal,
+  StyleSheet,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
   ImageSourcePropType,
-  Alert 
+  Alert
 } from 'react-native';
 
 // 데이터 타입 정의
@@ -39,12 +39,12 @@ const OpponentProfileModal: React.FC<Props> = ({ visible, onClose, userProfile }
       `${userProfile.name}님을 신고하시겠습니까?\n허위 신고 시 제재를 받을 수 있습니다.`,
       [
         { text: "취소", style: "cancel" },
-        { 
-          text: "신고", 
+        {
+          text: "신고",
           onPress: () => {
             Alert.alert("신고 완료", "신고가 정상적으로 접수되었습니다.");
             // 여기에 실제 신고 API 호출 로직 추가
-          } 
+          }
         }
       ]
     );
@@ -57,14 +57,14 @@ const OpponentProfileModal: React.FC<Props> = ({ visible, onClose, userProfile }
       `${userProfile.name}님을 차단하시겠습니까?\n더 이상 서로의 메시지를 볼 수 없습니다.`,
       [
         { text: "취소", style: "cancel" },
-        { 
-          text: "차단", 
+        {
+          text: "차단",
           style: "destructive", // 아이폰에서 빨간색으로 표시됨
           onPress: () => {
             onClose(); // 모달 닫기
             Alert.alert("차단 완료", "해당 사용자를 차단했습니다.");
             // 여기에 실제 차단 API 호출 로직 추가
-          } 
+          }
         }
       ]
     );
@@ -83,9 +83,9 @@ const OpponentProfileModal: React.FC<Props> = ({ visible, onClose, userProfile }
             <View style={styles.modalContent}>
               {/* 프로필 이미지 & 이름 섹션 */}
               <View style={styles.profileSection}>
-                <Image 
-                  source={userProfile.avatar} 
-                  style={styles.avatar} 
+                <Image
+                  source={userProfile.avatar}
+                  style={styles.avatar}
                 />
                 <Text style={styles.nameText}>{userProfile.name}</Text>
                 <Text style={styles.locationText}>{userProfile.location}</Text>
@@ -98,7 +98,7 @@ const OpponentProfileModal: React.FC<Props> = ({ visible, onClose, userProfile }
                   <Text style={[styles.statValue, { color: '#00E0C6' }]}>{userProfile.tier}</Text>
                 </View>
                 <View style={styles.divider} />
-                
+
                 <View style={styles.statItem}>
                   <Text style={styles.statLabel}>승/패</Text>
                   <Text style={styles.statValue}>{userProfile.win}승 {userProfile.loss}패</Text>
@@ -199,7 +199,7 @@ const styles = StyleSheet.create({
     height: '60%',
     backgroundColor: '#444',
   },
-  
+
   // --- 새로 추가된 스타일 ---
   actionRow: {
     flexDirection: 'row',

@@ -92,7 +92,7 @@ function InternalGameLoadingScreen({ visible, onFinish }: { visible: boolean; on
       Animated.timing(fadeAnim, { toValue: 1, duration: 500, useNativeDriver: true }).start();
       const timer = setTimeout(() => {
         Animated.timing(fadeAnim, { toValue: 0, duration: 300, useNativeDriver: true }).start(() => onFinish());
-      }, 5000); // 3.5초 로딩
+      }, 4000); // 4초 로딩
       return () => clearTimeout(timer);
     }
   }, [visible]);
@@ -147,7 +147,7 @@ export function ScoreTracker({ onComplete, onCancel }: ScoreTrackerProps) {
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const [showExitModal, setShowExitModal] = useState(false);
 
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
   const lastPointTimeRef = useRef<number>(0);
   const [scoreHistory, setScoreHistory] = useState<any[]>([]);
   const [pointLogs, setPointLogs] = useState<PointLog[]>([]);

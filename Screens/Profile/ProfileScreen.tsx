@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { Settings, Shield, LogOut, ChevronRight, History } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
+import { getRmrTier } from '../../utils/rmrCalculator'; // [추가] 유틸리티 import
 
 interface ProfileScreenProps {
   onLogout: () => void;
@@ -20,12 +21,16 @@ export default function ProfileScreen({ onLogout }: ProfileScreenProps) {
   const user = {
     name: '배드민턴 마스터',
     location: '안양시 동안구',
-    tier: 'Gold 3',
-    rmr: 1350,
+    // [수정] 티어는 RMR에 기반하여 동적으로 계산하도록 변경 (또는 하드코딩 제거)
+    // tier: 'Gold 3',
+    rmr: 1100,
     wins: 15,
     losses: 8,
     avatar: require('../../assets/images/card-logo.png'),
   };
+
+  // [추가] RMR 기반 티어 계산
+  const tier = getRmrTier(user.rmr);
 
   const handleHistoryPress = () => {
     navigation.navigate('MatchHistory');
@@ -54,7 +59,8 @@ export default function ProfileScreen({ onLogout }: ProfileScreenProps) {
         <View style={styles.rmrCard}>
           <View style={styles.rmrItem}>
             <Text style={styles.rmrLabel}>티어</Text>
-            <Text style={styles.rmrValueTier}>{user.tier}</Text>
+            {/* [수정] 계산된 tier 사용 */}
+            <Text style={styles.rmrValueTier}>{tier}</Text>
           </View>
           <View style={styles.rmrSeparator} />
           <View style={styles.rmrItem}>
@@ -111,7 +117,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#374151',
   },
   headerTitle: {
-    fontSize: 22, // [수정] 20 -> 22
+    fontSize: 22,
     fontWeight: 'bold',
     color: 'white',
     includeFontPadding: false,

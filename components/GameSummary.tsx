@@ -22,13 +22,16 @@ import {
   Send,
   Facebook,
   Activity,
-  PieChart
+  PieChart,
+  ChevronDown,
+  ChevronUp,
+  Info
 } from 'lucide-react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Svg, { Circle, G, Polygon, Line, Text as SvgText } from 'react-native-svg';
 
 import { calculateRMR, GameResult } from '../utils/rmrCalculator';
-import { PointLog } from './ScoreTracker';
+import { PointLog } from '../utils/rmrCalculator';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
@@ -178,20 +181,26 @@ const AnimatedActivityRing = ({ startRMR, endRMR }: { startRMR: number, endRMR: 
 
 export function GameSummary({ onNext, result }: GameSummaryProps) {
   const [activeTab, setActiveTab] = useState<'rmr' | 'chart'>('rmr');
+  const [showDetailReport, setShowDetailReport] = useState(false);
+
   const today = new Date();
   const formattedDate = `${today.getFullYear()}.${(today.getMonth() + 1).toString().padStart(2, '0')}.${today.getDate().toString().padStart(2, '0')}`;
 
   const analysisResult = useMemo(() => {
     const mockGameData: GameResult = {
-      playerA: { rmr: 1000, rd: 300, name: result.team1Name },
-      playerB: { rmr: 1000, rd: 300, name: result.team2Name },
+      playerA: { rmr: 1000, rd: 300, name: result.team1Name }, // 상대
+      playerB: { rmr: 1000, rd: 300, name: result.team2Name }, // 나
       team1Wins: result.team1Wins, team2Wins: result.team2Wins, pointLogs: result.pointLogs, isAbnormal: result.isForced
     };
-    return calculateRMR(mockGameData);
+    return {
+        ...calculateRMR(mockGameData),
+        initialData: mockGameData
+    };
   }, [result]);
 
-  const { newRMR_B, analysis } = analysisResult;
+  const { newRMR_B, analysis, initialData } = analysisResult;
   const oldRMR = 1000;
+  const rmrChange = newRMR_B - oldRMR;
   const isUserWinner = result.team2Wins > result.team1Wins;
   const isDraw = result.team2Wins === result.team1Wins;
   const caloriesBurned = (result.duration * 0.13).toFixed(0);
@@ -240,10 +249,71 @@ export function GameSummary({ onNext, result }: GameSummaryProps) {
           if (bestMetric.val > 0.5) {
               return `아쉽게 졌지만, ${bestMetric.label}만큼은 훌륭했어요! 👍`;
           } else {
-              // [수정] "다음엔 이길 수 있어요!" 문구 삭제
               return `${worstMetric.loseMsg}`;
           }
       }
+  };
+
+  // [수정] 전문 용어를 배제하고 일반인 친화적인 상세 리포트 생성
+  const generateDetailReportText = () => {
+    const stats = myStats;
+    const oppName = initialData.playerA.name;
+    const totalScoreA = result.pointLogs.filter(l => l.scorer === 'A').length;
+    const totalScoreB = result.pointLogs.filter(l => l.scorer === 'B').length;
+    const scoreDiff = Math.abs(totalScoreA - totalScoreB);
+
+    // 1. 경기 개요 (친근한 말투)
+    let report = "";
+    if (isUserWinner) {
+        report += `${oppName}님과의 경기에서 멋진 승리를 거두셨네요! 🎉\n`;
+    } else {
+        report += `${oppName}님과의 경기, 정말 아쉬운 한 판이었습니다. 😭\n`;
+    }
+
+    // 2. 세트 및 점수 내용 분석 (가중치 용어 제거)
+    if (Math.abs(result.team1Wins - result.team2Wins) === 2) {
+        report += `단 한 세트도 내주지 않고 압도적인 경기를 펼쳤습니다. `;
+    } else {
+        report += `마지막까지 결과를 알 수 없는 치열한 접전이었습니다. `;
+    }
+
+    if (scoreDiff > 10) {
+        report += `전체 득점에서도 ${scoreDiff}점 차이로 확실한 실력 차이를 보여주었군요.\n\n`;
+    } else {
+        report += `전체 득점 차이는 고작 ${scoreDiff}점에 불과할 정도로 막상막하의 승부였습니다.\n\n`;
+    }
+
+    // 3. 플레이 스타일 강점 분석 (0.55 이상인 항목 중 상위 2개 추출)
+    const sortedStats = Object.entries(stats)
+        .sort(([, a], [, b]) => (b as number) - (a as number));
+
+    const topStats = sortedStats.filter(([, val]) => (val as number) > 0.55).slice(0, 2);
+
+    if (topStats.length > 0) {
+        const descriptions: {[key: string]: string} = {
+            clutch: "중요한 순간마다 득점에 성공하는 '위기 관리 능력'",
+            tempo: "상대를 정신없게 만드는 '빠른 템포의 공격'",
+            endurance: "긴 랠리에도 지치지 않는 '강인한 체력'",
+            focus: "경기 후반부로 갈수록 살아나는 '무서운 집중력'",
+            cons: "실수 없이 점수를 지키는 '안정적인 플레이'",
+            com: "불리한 상황을 뒤집는 '역전의 저력'"
+        };
+
+        report += "이번 경기에서는 특히 ";
+        report += topStats.map(([key]) => descriptions[key]).join(', ');
+        report += "이(가) 돋보였습니다.\n\n";
+    } else {
+        report += "전반적으로 기복 없는 무난한 플레이를 보여주셨습니다. 다음 경기에서는 나만의 확실한 '필살기'를 하나 만들어보면 어떨까요?\n\n";
+    }
+
+    // 4. 결론 (RMR 변동 안내)
+    report += `이러한 경기 내용이 종합적으로 반영되어, 회원님의 RMR 점수가 ${Math.abs(rmrChange)}점 ${rmrChange >= 0 ? '상승했습니다 📈' : '하락했습니다 📉'}.`;
+
+    if (!isUserWinner) {
+        report += " 패배는 쓰지만, 랠리의 분석과 함께라면 금방 더 강해질 수 있습니다. 화이팅!";
+    }
+
+    return report;
   };
 
   const getPlayStyleTitle = () => {
@@ -302,7 +372,7 @@ export function GameSummary({ onNext, result }: GameSummaryProps) {
                 </TouchableOpacity>
               </View>
 
-              <View style={styles.contentArea}>
+              <View style={[styles.contentArea, showDetailReport && styles.contentAreaExpanded]}>
                 {activeTab === 'rmr' ? (
                   <>
                     <View style={styles.textReportContainer}>
@@ -312,7 +382,28 @@ export function GameSummary({ onNext, result }: GameSummaryProps) {
 
                     <View style={styles.visualSectionRMR}>
                       <AnimatedActivityRing startRMR={oldRMR} endRMR={newRMR_B} />
+
+                      <TouchableOpacity
+                        style={styles.detailButton}
+                        onPress={() => setShowDetailReport(!showDetailReport)}
+                        activeOpacity={0.8}
+                      >
+                        <Text style={styles.detailButtonText}>{showDetailReport ? '상세 분석 닫기' : '상세 분석 보기'}</Text>
+                        {showDetailReport ? <ChevronUp size={14} color="rgba(255,255,255,0.8)" /> : <ChevronDown size={14} color="rgba(255,255,255,0.8)" />}
+                      </TouchableOpacity>
                     </View>
+
+                    {showDetailReport && (
+                        <View style={styles.detailReportBox}>
+                            <View style={{flexDirection:'row', alignItems:'center', marginBottom:8, gap:6}}>
+                                <Info size={16} color="#34D399"/>
+                                <Text style={styles.detailReportHeader}>경기 상세 분석</Text>
+                            </View>
+                            <Text style={styles.detailReportText}>
+                                {generateDetailReportText()}
+                            </Text>
+                        </View>
+                    )}
                   </>
                 ) : (
                   <>
@@ -389,13 +480,15 @@ const styles = StyleSheet.create({
 
   activePillTabText: { color: '#34D399', fontWeight: 'bold' },
 
-  contentArea: { width: '100%', alignItems: 'center', height: normalize(270), justifyContent: 'flex-start' },
+  contentArea: { width: '100%', alignItems: 'center', minHeight: normalize(270), justifyContent: 'flex-start' },
+  contentAreaExpanded: { minHeight: normalize(350) },
+
   textReportContainer: { alignItems: 'center', marginBottom: 8, height: 40, justifyContent: 'center' },
   reportTitle: { fontSize: normalize(18), fontWeight: 'bold', color: 'white', marginBottom: 4, textAlign: 'center' },
   reportBody: { fontSize: normalize(16), color: '#E5E7EB', lineHeight: 22, textAlign: 'center' },
 
-  visualSectionRMR: { flex: 1, justifyContent: 'center', alignItems: 'center', width: '100%' },
-  visualSectionChart: { justifyContent: 'center', alignItems: 'center', width: '100%', marginTop: -10, marginBottom: 10 },
+  visualSectionRMR: { flex: 1, justifyContent: 'center', alignItems: 'center', width: '100%', position: 'relative' },
+  visualSectionChart: { justifyContent: 'center', alignItems: 'center', width: '100%', marginTop: 0, marginBottom: 10 },
 
   ringContainer: { alignItems: 'center', justifyContent: 'center' },
   ringTextContainer: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' },
@@ -403,6 +496,50 @@ const styles = StyleSheet.create({
   ringScoreText: { fontSize: normalize(36), fontWeight: '900', color: 'white' },
   diffBadge: { marginTop: 6, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8 },
   diffText: { fontSize: normalize(14), fontWeight: 'bold' },
+
+  detailButton: {
+    marginTop: -10,
+    backgroundColor: '#374151',
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    borderRadius: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.15)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+    zIndex: 10,
+  },
+  detailButtonText: {
+    color: 'rgba(255,255,255,0.9)',
+    fontSize: normalize(12),
+    fontWeight: '600',
+  },
+  detailReportBox: {
+    marginTop: 20,
+    marginBottom: 10,
+    width: '100%',
+    backgroundColor: 'rgba(0, 0, 0, 0.2)',
+    borderRadius: 16,
+    padding: 16,
+    borderLeftWidth: 3,
+    borderLeftColor: '#34D399',
+  },
+  detailReportHeader: {
+    fontSize: normalize(14),
+    fontWeight: 'bold',
+    color: '#34D399',
+  },
+  detailReportText: {
+    color: '#E5E7EB',
+    fontSize: normalize(13),
+    lineHeight: 20,
+  },
 
   statsRow: { flexDirection: 'row', justifyContent: 'center', gap: 10, width: '100%', marginTop: 10 },
   statItem: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(255,255,255,0.05)', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12 },

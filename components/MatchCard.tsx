@@ -1,9 +1,7 @@
 import React from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, Image } from 'react-native';
-// 1. 네이티브용 아이콘 import
 import { Calendar, MapPin } from 'lucide-react-native';
 
-// 2. 네이티브 Badge 컴포넌트 정의
 const Badge = ({ text, color }: { text: string, color: 'blue' | 'green' }) => (
   <View style={[
     styles.badgeContainer,
@@ -13,29 +11,30 @@ const Badge = ({ text, color }: { text: string, color: 'blue' | 'green' }) => (
   </View>
 );
 
-interface Match {
+export interface Match {
   id: number;
   status: string;
   playerCount: string;
   title: string;
   date: string;
   location: string;
+  // (Home.tsx에서 확장된 타입을 사용할 예정이지만 기본 인터페이스 유지)
+  [key: string]: any; 
 }
 
 interface MatchCardProps {
   match: Match;
-  onStartGame: () => void;
+  onPress: (match: Match) => void; // onStartGame -> onPress 로 변경 및 매개변수 추가
 }
 
-export function MatchCard({ match, onStartGame }: MatchCardProps) {
+export function MatchCard({ match, onPress }: MatchCardProps) {
   return (
-    // 3. <button> -> <TouchableOpacity>
     <TouchableOpacity
-      onPress={onStartGame}
-      style={styles.cardContainer} // 4. className -> style
+      onPress={() => onPress(match)}
+      style={styles.cardContainer}
+      activeOpacity={0.7}
     >
       <View style={styles.cardHeader}>
-        {/* 5. (경로 수정) ../assets/ 로 상위 폴더 지정 */}
         <Image
           source={require('../assets/images/card-logo.png')}
           style={styles.cardLogo}
@@ -62,7 +61,6 @@ export function MatchCard({ match, onStartGame }: MatchCardProps) {
   );
 }
 
-// 6. StyleSheet로 모든 스타일 정의
 const styles = StyleSheet.create({
   cardContainer: {
     width: '100%',
@@ -71,20 +69,19 @@ const styles = StyleSheet.create({
     padding: 16,
     borderWidth: 1,
     borderColor: '#E5E7EB',
-    // 7. (수정) Home.tsx의 gap을 대체하기 위해 여백 추가
     marginBottom: 12,
   },
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8, // View 안의 gap은 대부분 잘 작동합니다.
+    gap: 8,
     marginBottom: 12,
   },
   cardLogo: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#333', // 로고 이미지가 없을 경우를 대비한 임시 배경
+    backgroundColor: '#333',
   },
   cardBody: {
     gap: 6,
@@ -120,4 +117,3 @@ const styles = StyleSheet.create({
     backgroundColor: '#34D399',
   },
 });
-

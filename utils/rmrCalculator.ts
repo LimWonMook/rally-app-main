@@ -1,4 +1,4 @@
-// utils/rmrCalculator.ts
+// RMR(Rally Match Rating) v4 Calculator
 
 export interface PointLog {
   scorer: 'A' | 'B';
@@ -6,16 +6,16 @@ export interface PointLog {
   scoreB: number;
   setIndex: number;
   timestamp: number;
-  duration: number;
+  duration: number; // 랠리 지속 시간
 }
 
 export interface GameResult {
   playerA: { rmr: number; rd: number; name: string }; // Team 1 (상대)
   playerB: { rmr: number; rd: number; name: string }; // Team 2 (나)
-  team1Wins: number;
-  team2Wins: number;
-  pointLogs: PointLog[];
-  isAbnormal: boolean;
+  team1Wins: number; // (상대) 세트 승수
+  team2Wins: number; // (나) 세트 승수
+  pointLogs: PointLog[]; // 경기 전체 포인트 로그
+  isAbnormal: boolean; // 기권, 노쇼 등 비정상 경기 종료 여부
 }
 
 export interface RMRAnalysis {
@@ -24,9 +24,11 @@ export interface RMRAnalysis {
   newRD_A: number;
   newRD_B: number;
   analysis: {
-    m_total: number;
-    m_flow: number;
-    flowDetails: {
+    m_total: number; // 최종 경기 내용 보정치
+    m_set: number;   // 세트 스코어 보정치
+    m_pd: number;    // 총 득점차 보정치
+    m_flow: number;  // 경기 흐름 보정치
+    flowDetails: {   // M_flow 하위 상세 지표
       clutch: number;
       com: number;
       cons: number;
@@ -37,26 +39,50 @@ export interface RMRAnalysis {
   };
 }
 
+// [추가] 티어 산정 유틸리티
+// Bronze 1~3 < Silver 1~3 < Gold 1~3 (1: Entry, 3: High)
+export const getRmrTier = (rmr: number): string => {
+  if (rmr < 800) return 'Bronze 1';
+  if (rmr < 900) return 'Bronze 2';
+  if (rmr < 1000) return 'Bronze 3';
+
+  if (rmr < 1100) return 'Silver 1';
+  if (rmr < 1200) return 'Silver 2';
+  if (rmr < 1300) return 'Silver 3';
+
+  if (rmr < 1400) return 'Gold 1';
+  if (rmr < 1500) return 'Gold 2';
+  return 'Gold 3'; // 1500+
+};
+
+// RMR v4 상수 정의
 const RMR_CONSTANTS = {
+  // Volatility (변동성) 계산 상수: (0.08 * RD) + 12
   VOLATILITY_BASE: 12,
   VOLATILITY_MULTIPLIER: 0.08,
+
+  // M_flow 하위 지표 가중치
   FLOW_WEIGHTS: {
-    CLUTCH: 0.25,
-    COM: 0.20,
-    CONS: 0.20,
-    ENDURANCE: 0.15,
-    FOCUS: 0.10,
-    TEMPO: 0.05,
-    MAX_RUN: 0.05,
+    CLUTCH: 0.25,    // 듀스 상황 승률
+    COM: 0.20,       // 3점차 역전 능력
+    CONS: 0.20,      // 리드 유지 능력
+    ENDURANCE: 0.15, // 장기 랠리 승률
+    FOCUS: 0.10,     // 3-1세트 득점률
+    TEMPO: 0.05,     // 단기 랠리 승률
+    MAX_RUN: 0.05,   // 연속 득점
   },
 };
 
+// 쌍곡탄젠트 함수: 점수차 보정(M_pd) 계산 시 완만한 증가 곡선을 위해 사용
 const tanh = (x: number) => (Math.exp(2 * x) - 1) / (Math.exp(2 * x) + 1);
+// 기대 승률 (Expected Score, E_A) 계산  * 공식: 1 / (1 + 10^((RMR_B - RMR_A) / 400))
 const calculateExpectedScore = (rmrA: number, rmrB: number): number => 1 / (1 + Math.pow(10, (rmrB - rmrA) / 400));
+// Volatility (변동성) 계산: RD(신뢰도)에 따른 점수 변동폭 변화
 const calculateVolatility = (rd: number): number => RMR_CONSTANTS.VOLATILITY_MULTIPLIER * rd + RMR_CONSTANTS.VOLATILITY_BASE;
+// RD (신뢰도) 계산
 const calculateNewRD = (currentRD: number): number => Math.max(currentRD - (currentRD * 0.05), 30);
 
-// --- [상세] 로그 출력 함수 ---
+// 로그 출력 함수 (디버깅 콘솔 리포트)
 export const printRMRLog = (data: GameResult, result: RMRAnalysis) => {
   const { playerA, playerB, team1Wins, team2Wins, pointLogs, isAbnormal } = data;
   const { newRMR_A, newRMR_B, analysis } = result;
@@ -65,9 +91,8 @@ export const printRMRLog = (data: GameResult, result: RMRAnalysis) => {
   const totalScoreA = pointLogs.filter(l => l.scorer === 'A').length;
   const totalScoreB = pointLogs.filter(l => l.scorer === 'B').length;
   const winner = team1Wins > team2Wins ? 'A' : 'B';
-  const winnerName = winner === 'A' ? playerA.name : playerB.name;
 
-  // 상세 분석을 위한 카운트 계산
+  // 상세 분석 데이터 집계
   const longRallies = pointLogs.filter(l => l.duration >= 30);
   const longRallyWins = longRallies.filter(l => (winner === 'A' ? l.scorer === 'A' : l.scorer === 'B')).length;
 
@@ -77,7 +102,7 @@ export const printRMRLog = (data: GameResult, result: RMRAnalysis) => {
   const shortRallies = pointLogs.filter(l => l.duration < 30);
   const shortRallyWins = shortRallies.filter(l => (winner === 'A' ? l.scorer === 'A' : l.scorer === 'B')).length;
 
-  // 세트별 승률 계산 (Focus)
+  // 세트별 승률 계산 (Focus 분석용)
   const set1Logs = pointLogs.filter(l => l.setIndex === 1);
   const lastSetLogs = pointLogs.filter(l => l.setIndex === Math.max(...pointLogs.map(p=>p.setIndex)));
   const getWinRate = (logs: PointLog[]) => logs.length ? (logs.filter(l => (winner === 'A' ? l.scorer === 'A' : l.scorer === 'B')).length / logs.length) * 100 : 0;
@@ -120,20 +145,20 @@ export const printRMRLog = (data: GameResult, result: RMRAnalysis) => {
   console.log(`🎯 Expected Win Rate (A승률): ${(E_A * 100).toFixed(1)}%`);
   console.log('---------------------------------------------');
   console.log(`✨ Final RMR Change:`);
-  console.log(`   Team 1 (상대): ${playerA.rmr} -> ${newRMR_A} (${newRMR_A - playerA.rmr > 0 ? '+' : ''}${newRMR_A - playerA.rmr})`);
-  console.log(`   Team 2 (나):   ${playerB.rmr} -> ${newRMR_B} (${newRMR_B - playerB.rmr > 0 ? '+' : ''}${newRMR_B - playerB.rmr})`);
+  console.log(`   Team 1 (상대): ${playerA.rmr} -> ${newRMR_A} (${newRMR_A - playerA.rmr > 0 ? '+' : ''}${newRMR_A - playerA.rmr}) [${getRmrTier(newRMR_A)}]`);
+  console.log(`   Team 2 (나):   ${playerB.rmr} -> ${newRMR_B} (${newRMR_B - playerB.rmr > 0 ? '+' : ''}${newRMR_B - playerB.rmr}) [${getRmrTier(newRMR_B)}]`);
   console.log('=============================================\n');
 };
 
-// --- 메인 계산 함수 ---
+// 메인 계산 함수
 export const calculateRMR = (data: GameResult): RMRAnalysis => {
   const { playerA, playerB, team1Wins, team2Wins, pointLogs, isAbnormal } = data;
 
-  // 1. M_set
+  // 1. M_set (세트 스코어 보정치)
   let m_set = 1.0;
   if ((team1Wins === 2 && team2Wins === 0) || (team1Wins === 0 && team2Wins === 2)) m_set = 1.25;
 
-  // 2. M_pd
+  // 2. M_pd (총 득점차 보정치)
   const totalScoreA = pointLogs.filter(l => l.scorer === 'A').length;
   const totalScoreB = pointLogs.filter(l => l.scorer === 'B').length;
   const scoreDiff = Math.abs(totalScoreA - totalScoreB);
@@ -142,7 +167,7 @@ export const calculateRMR = (data: GameResult): RMRAnalysis => {
   // 승자 판별
   const winner = team1Wins > team2Wins ? 'A' : 'B';
 
-  // 3. M_flow
+  // 3. M_flow (경기 흐름 보정치)
   const longRallies = pointLogs.filter(l => l.duration >= 30);
   let enduranceVal = 0.5;
   if (longRallies.length > 0) {
@@ -166,7 +191,6 @@ export const calculateRMR = (data: GameResult): RMRAnalysis => {
 
   const set1Logs = pointLogs.filter(l => l.setIndex === 1);
   const lastSetLogs = pointLogs.filter(l => l.setIndex === Math.max(...pointLogs.map(p=>p.setIndex)));
-
   const getWinRate = (logs: PointLog[]) => logs.length ? logs.filter(l => (winner === 'A' ? l.scorer === 'A' : l.scorer === 'B')).length / logs.length : 0;
   const focusVal = Math.max(0, getWinRate(lastSetLogs) - getWinRate(set1Logs) + 0.5);
 

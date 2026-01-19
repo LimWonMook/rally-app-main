@@ -282,11 +282,11 @@ const Step3_AccountInfo = ({ onNext }: { onNext: (data: any) => void }) => {
 const Step4_RMRQuiz = ({ onComplete }: { onComplete: () => void }) => {
   const [answer1, setAnswer1] = useState<string | null>(null);
 
-  const handleComplete = () => {
-    // (추후) 퀴즈 정답을 기반으로 초기 RMR 참고용 데이터 전송
-    Alert.alert("환영합니다!", "회원가입이 완료되었습니다.");
-    onComplete();
-  };
+   const handleComplete = () => {
+     // (추후) 퀴즈 정답을 기반으로 초기 RMR 참고용 데이터 전송
+//     Alert.alert("환영합니다!", "회원가입이 완료되었습니다.");
+     onComplete();
+   };
 
   return (
     <>
